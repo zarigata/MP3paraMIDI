@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=70.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mp3paramidi"
+version = "0.1.0"
+description = "Cross-platform audio to MIDI converter with advanced features including note quantization, tempo detection, and MIDI playback"
+authors = [
+    {name = "Zarigata"},
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+license = {file = "LICENSE"}
+keywords = ["audio", "midi", "ai", "music", "conversion", "quantization", "tempo", "playback"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+]
+dependencies = [
+    "PyQt6>=6.4.0,<7.0.0",
+    "librosa>=0.10.0,<0.12.0",
+    "pydub>=0.25.0,<0.26.0",
+    "numpy>=1.24.0,<2.0.0",
+    "soundfile>=0.12.0,<1.0.0",
+    "mido>=1.2.0,<2.0.0",
+    "pretty-midi>=0.2.0,<0.3.0",
+    "pygame>=2.5.0,<3.0.0"
+]
+
+[project.optional-dependencies]
+ai = [
+    "basic-pitch>=0.3.0,<0.4.0",
+    "torch>=2.0.0,<3.0.0",
+    "torchaudio>=2.0.0,<3.0.0",
+    "demucs>=4.0.0",
+    "scipy>=1.10.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov",
+    "pytest-qt>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pyinstaller>=5.0.0",
+]
+
+[project.scripts]
+mp3paramidi = "mp3paramidi.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/zarigata/mp3paramidi"
+Repository = "https://github.com/zarigata/mp3paramidi"
+Issues = "https://github.com/zarigata/mp3paramidi/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,18 @@
+# Include documentation
+include README.md
+include LICENSE
+
+# Include requirements files
+include requirements.txt
+include requirements-*.txt
+
+# Include package data
+recursive-include src/mp3paramidi/assets *
+recursive-include docs *.md
+recursive-include docs *.rst
+
+# Exclude build artifacts and cache
+global-exclude __pycache__
+global-exclude *.py[co]
+prune .pytest_cache
+prune .mypy_cache
