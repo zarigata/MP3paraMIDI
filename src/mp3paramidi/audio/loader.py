@@ -39,6 +39,7 @@ class AudioMetadata:
     channels: int  # 1 for mono, 2 for stereo
     bit_depth: Optional[int] = None  # bits per sample, if known
     format: Optional[str] = None  # 'MP3', 'WAV', etc.
+    file_path: Optional[Path] = None  # Original file path, if available
 
 
 @dataclass
@@ -52,6 +53,16 @@ class AudioData:
     def duration_samples(self) -> int:
         """Get the duration in samples."""
         return len(self.samples)
+
+    @property
+    def sample_rate(self) -> int:
+        """Convenience access to metadata sample rate."""
+        return self.metadata.sample_rate
+
+    @property
+    def data(self) -> NpFloatArray:
+        """Alias for backwards compatibility with older processing code."""
+        return self.samples
 
 
 class FFmpegDetector:
@@ -245,7 +256,8 @@ class AudioLoader:
                 sample_rate=sample_rate,
                 channels=channels,
                 bit_depth=bit_depth,
-                format='WAV'
+                format='WAV',
+                file_path=file_path,
             )
             
             AudioValidator.validate_metadata(metadata, file_path=file_path)
@@ -286,7 +298,8 @@ class AudioLoader:
                 sample_rate=sample_rate,
                 channels=channels,
                 bit_depth=None,  # MP3 doesn't have a fixed bit depth
-                format='MP3'
+                format='MP3',
+                file_path=file_path,
             )
             
             AudioValidator.validate_metadata(metadata, file_path=file_path)
@@ -335,7 +348,8 @@ class AudioLoader:
                 sample_rate=audio.frame_rate,
                 channels=audio.channels,
                 bit_depth=audio.sample_width * 8,
-                format='MP3'
+                format='MP3',
+                file_path=file_path,
             )
             
             AudioValidator.validate_metadata(metadata, file_path=file_path)

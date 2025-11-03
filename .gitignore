@@ -36,6 +36,12 @@ venv/
 env/
 ENV/
 .venv/
+VAM/
+venv311/
+
+# VAM project assets
+vamp/
+vamp/**
 
 # IDE specific files
 .vscode/

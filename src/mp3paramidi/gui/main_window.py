@@ -240,29 +240,29 @@ class MainWindow(QMainWindow):
         self.worker_thread = QThread()
         
         # Create conversion config from settings
-        config = ConversionConfig(
-            fmin=self.settings_data.fmin,
-            fmax=self.settings_data.fmax,
-            tempo=self.settings_data.default_tempo,
-            min_note_duration=self.settings_data.min_note_duration,
-            output_dir=None,  # Use default output directory
-            use_ai_models=self.settings_data.use_ai_models,
-            enable_separation=self.settings_data.enable_separation,
-            demucs_model="htdemucs",
-            basic_pitch_config=self._get_basic_pitch_config(self.settings_data.sensitivity_preset),
-            device=None,
-            models_cache_dir=Path.cwd() / "models",
+        config = {
+            'fmin': self.settings_data.fmin,
+            'fmax': self.settings_data.fmax,
+            'tempo': self.settings_data.default_tempo,
+            'min_note_duration': self.settings_data.min_note_duration,
+            'output_dir': None,  # Use default output directory
+            'use_ai_models': self.settings_data.use_ai_models,
+            'enable_separation': self.settings_data.enable_separation,
+            'demucs_model': "htdemucs",
+            'basic_pitch_config': self._get_basic_pitch_config(self.settings_data.sensitivity_preset),
+            'device': None,
+            'models_cache_dir': Path.cwd() / "models",
             # New settings
-            detect_tempo=self.settings_data.detect_tempo,
-            quantization_enabled=self.settings_data.quantization_enabled,
-            quantization_grid=self.settings_data.quantization_grid.name,
-            filter_config={
+            'detect_tempo': self.settings_data.detect_tempo,
+            'quantization_enabled': self.settings_data.quantization_enabled,
+            'quantization_grid': self.settings_data.quantization_grid.name,
+            'filter_config': {
                 'min_confidence': self.settings_data.min_confidence,
                 'min_duration': self.settings_data.min_note_duration,
                 'remove_outliers': self.settings_data.remove_outliers,
             },
-            sensitivity_preset=self.settings_data.sensitivity_preset,
-        )
+            'sensitivity_preset': self.settings_data.sensitivity_preset,
+        }
         
         self.conversion_worker = ConversionWorker(
             audio_data_list=self.loaded_audio_data,

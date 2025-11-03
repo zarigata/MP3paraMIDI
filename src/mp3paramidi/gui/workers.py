@@ -7,9 +7,9 @@ long-running tasks without freezing the GUI.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Mapping
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -64,7 +64,7 @@ class ConversionWorker(QObject):
     def __init__(
         self,
         audio_data_list: List[AudioData],
-        config: Dict[str, Any],
+        config: Dict[str, Any] | ConversionConfig | Mapping[str, Any],
         parent: Optional[QObject] = None
     ) -> None:
         """Initialize the worker.
@@ -81,7 +81,15 @@ class ConversionWorker(QObject):
         """
         super().__init__(parent)
         self.audio_data_list = audio_data_list
-        self.config = ConversionConfig(**config)
+
+        if isinstance(config, ConversionConfig):
+            config_data: Dict[str, Any] = asdict(config)
+        elif isinstance(config, Mapping):
+            config_data = dict(config)
+        else:
+            config_data = dict(config)
+
+        self.config = ConversionConfig(**config_data)
         self.is_cancelled = False
     
     @pyqtSlot()
@@ -103,7 +111,8 @@ class ConversionWorker(QObject):
                     break
                 
                 # Get file path as Path object or default to unknown
-                file_path = Path(audio_data.metadata.file_path) if audio_data.metadata.file_path else Path("<unknown>")
+                audio_file_path = getattr(audio_data, "file_path", None)
+                file_path = Path(audio_file_path) if audio_file_path else Path("<unknown>")
                 display_name = file_path.name if file_path.name != "<unknown>" else "<unknown>"
                 
                 try:

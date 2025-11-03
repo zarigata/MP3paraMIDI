@@ -351,10 +351,21 @@ class AudioToMidiPipeline:
         original_note_count = len(note_events)
         self._report_progress('note_filtering', 0.65, 'Filtering notes...')
         try:
-            note_events = self.note_filter.filter_notes(note_events)
-            filtered_count = original_note_count - len(note_events)
+            filtered_notes = self.note_filter.filter_notes(note_events)
+            if original_note_count and not filtered_notes:
+                logger.warning("Note filtering removed all notes; reverting to unfiltered results")
+                filtered_notes = note_events
+                filtered_count = 0
+            else:
+                filtered_count = original_note_count - len(filtered_notes)
+            note_events = filtered_notes
             result.notes_filtered = filtered_count
-            logger.info(f"Filtered {filtered_count} notes ({filtered_count/original_note_count*100:.1f}% removed)")
+            if original_note_count:
+                logger.info(
+                    "Filtered %d notes (%.1f%% removed)",
+                    filtered_count,
+                    (filtered_count / original_note_count * 100.0) if original_note_count else 0.0,
+                )
             self._report_progress('note_filtering', 0.7, 'Note filtering complete')
         except Exception as e:
             logger.warning(f"Note filtering failed: {str(e)}, using unfiltered notes")
@@ -368,9 +379,19 @@ class AudioToMidiPipeline:
                     grid=self.quantization_grid,
                     tempo=quantize_tempo
                 )
-                note_events = self.note_quantizer.quantize_notes(note_events)
-                result.quantization_applied = True
-                logger.info(f"Quantized {len(note_events)} notes to {self.quantization_grid.name} grid")
+                if note_events:
+                    quantized_notes = self.note_quantizer.quantize_notes(note_events)
+                    if not quantized_notes:
+                        logger.warning("Quantization removed all notes; keeping unquantized results")
+                        quantized_notes = note_events
+                    else:
+                        result.quantization_applied = True
+                        logger.info(
+                            "Quantized %d notes to %s grid",
+                            len(quantized_notes),
+                            self.quantization_grid.name,
+                        )
+                    note_events = quantized_notes
                 self._report_progress('quantization', 0.8, 'Note quantization complete')
             except Exception as e:
                 logger.warning(f"Note quantization failed: {str(e)}, using unquantized notes")
