@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mp3paramidi"
 version = "0.1.0"
-description = "Cross-platform audio to MIDI converter with advanced features including note quantization, tempo detection, and MIDI playback"
+description = "Cross-platform audio to MIDI converter with advanced features including note quantization, tempo detection, and MIDI playback. Available as pre-built binaries for Windows, macOS, and Linux."
 authors = [
     {name = "Zarigata"},
 ]
@@ -50,6 +50,7 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.0.0",
     "pyinstaller>=5.0.0",
+    "pyyaml>=6.0.0",
 ]
 
 [project.scripts]
@@ -59,6 +60,7 @@ mp3paramidi = "mp3paramidi.__main__:main"
 Homepage = "https://github.com/zarigata/mp3paramidi"
 Repository = "https://github.com/zarigata/mp3paramidi"
 Issues = "https://github.com/zarigata/mp3paramidi/issues"
+Releases = "https://github.com/zarigata/mp3paramidi/releases"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

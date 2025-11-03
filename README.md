@@ -7,6 +7,35 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: Windows | macOS | Linux](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/zarigata/mp3paramidi)
+[![GitHub stars](https://img.shields.io/github/stars/zarigata/mp3paramidi?style=social)](https://github.com/zarigata/mp3paramidi/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/zarigata/mp3paramidi)](https://github.com/zarigata/mp3paramidi/issues)
+[![GitHub release](https://img.shields.io/github/v/release/zarigata/mp3paramidi)](https://github.com/zarigata/mp3paramidi/releases)
+[![Build Status](https://github.com/zarigata/mp3paramidi/workflows/Build%20and%20Release/badge.svg)](https://github.com/zarigata/mp3paramidi/actions)
+
+## 📚 Table of Contents
+
+- [Description](#description)
+- [✨ Features](#-features)
+  - [Core Features](#core-features)
+  - [Advanced Features](#advanced-features)
+- [🚀 Requirements](#-requirements)
+- [💻 Installation](#-installation)
+- [🏗️ Building from Source](#️-building-from-source)
+- [🎮 Quick Start](#-quick-start)
+- [⚙️ Advanced Features](#-advanced-features)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [⚠️ Limitations](#️-limitations)
+- [🛣️ Roadmap](#️-roadmap)
+- [💡 Usage Examples](#-usage-examples)
+- [🧪 Testing](#-testing)
+- [📸 Screenshots](#-screenshots)
+- [🎬 Demo](#-demo)
+- [🆘 Support](#-support)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [👤 Author](#-author)
+- [📚 Citation](#-citation)
+- [🙏 Acknowledgments](#-acknowledgments)
 
 ## Description
 
@@ -43,7 +72,19 @@ MP3paraMIDI is a cross-platform application that converts MP3 and WAV audio file
 - Recommended: 4GB+ RAM for processing audio files
 - Optional: GPU with 4GB+ VRAM for AI features
 
+> Pre-built binaries bundle all Python dependencies except FFmpeg. Install FFmpeg separately for MP3 decoding.
+
 ## 💻 Installation
+
+### Option 1: Download Pre-built Binary (Recommended)
+
+1. Visit the [Releases page](https://github.com/zarigata/mp3paramidi/releases) and download the latest build for your platform (Windows `.exe`, macOS `.app/.dmg`, Linux AppImage).
+2. Choose the desired variant:
+   - **Standard build (~200MB)** – Core features only.
+   - **AI build (~1GB)** – Includes optional AI dependencies for polyphonic detection.
+3. Install FFmpeg for MP3 decoding (see below) and run the downloaded executable. No Python environment is required.
+
+### Option 2: Install from Source
 
 1. **Clone the repository**
    ```bash
@@ -73,6 +114,16 @@ MP3paraMIDI is a cross-platform application that converts MP3 and WAV audio file
    ```
 
    Note: On first run, AI models will be automatically downloaded (500MB-2GB).
+
+## 🏗️ Building from Source
+
+Detailed build instructions (icon generation, PyInstaller usage, platform packaging) are available in [docs/BUILDING.md](docs/BUILDING.md). Quick start:
+
+```bash
+python -m pip install -r requirements.txt
+bash tools/build_icons.sh  # or pwsh tools/build_icons.ps1 on Windows
+pyinstaller build_configs/mp3paramidi.spec
+```
 
 ## 🎮 Quick Start
 
@@ -269,9 +320,36 @@ pytest tests/ --gui-tests
 pytest tests/ --cov=mp3paramidi
 ```
 
+## 📸 Screenshots
+
+Showcase the polished GUI to help users understand the experience before installing. Replace the placeholders below with actual assets stored in `docs/images/`:
+
+- ![Main Window](docs/images/main-window.png)
+- ![Settings Dialog](docs/images/settings-dialog.png)
+- ![Conversion Progress](docs/images/conversion-progress.png)
+- ![Playback Controls](docs/images/playback-controls.png)
+
+For guidance on capturing consistent visuals, see [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
+
+## 🎬 Demo
+
+Bring the workflow to life with an animated walkthrough. Add a GIF (or short video link) showing drag-and-drop ➜ conversion ➜ playback:
+
+![Demo Workflow](docs/images/demo.gif)
+
+## 🆘 Support
+
+Help MP3paraMIDI grow:
+
+- ⭐ Star the repository to boost visibility
+- 🐞 Report bugs and share ideas via GitHub Issues
+- 💻 Contribute code, docs, or tests (see [CONTRIBUTING.md](CONTRIBUTING.md))
+- 📣 Share the project with musicians, developers, and communities
+- ❤️ Sponsor future development if you are able (coming soon)
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Whether you're fixing bugs, adding features, improving documentation, or suggesting ideas, your help is appreciated. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
@@ -279,9 +357,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👤 Author
 
-**Zarigata**
+Project created and maintained by **Zarigata**. Stay connected:
 
 - GitHub: [@zarigata](https://github.com/zarigata)
+- Twitter/X: [@zarigata](https://twitter.com/zarigata)
+- LinkedIn: [Zarigata](https://www.linkedin.com/in/zarigata)
+- Website: [https://zarigata.dev](https://zarigata.dev)
+
+If you find this project useful, please consider giving it a ⭐ on GitHub!
+
+## 📚 Citation
+
+If MP3paraMIDI supports your research, please cite it:
+
+```bibtex
+@software{mp3paramidi,
+  author       = {Zarigata},
+  title        = {MP3paraMIDI},
+  year         = {2025},
+  url          = {https://github.com/zarigata/mp3paramidi},
+  version      = {0.1.0},
+  publisher    = {GitHub},
+  note         = {Cross-platform audio to MIDI converter with AI-powered features}
+}
+```
 
 ## 🙏 Acknowledgments
 

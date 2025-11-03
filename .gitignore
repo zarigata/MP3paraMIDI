@@ -21,9 +21,9 @@ wheels/
 .installed.cfg
 *.egg
 
-# PyInstaller
+# PyInstaller (spec files tracked in build_configs/)
 *.manifest
-*.spec
+!build_configs/*.spec
 
 # Unit test / coverage reports
 .pytest_cache/
@@ -52,6 +52,9 @@ models/*
 *.log
 *.tmp
 temp/
+
+# Generated assets
+assets/icons/
 
 # Build artifacts
 *.exe

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# AppImage launcher for MP3paraMIDI.
+
+set -e
+
+HERE="$(dirname "$(readlink -f "$0")")"
+
+# Ensure bundled binaries and libraries take precedence.
+export PATH="$HERE/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$HERE/usr/lib:${LD_LIBRARY_PATH:-}"
+
+exec "$HERE/usr/bin/mp3paramidi" "$@"
