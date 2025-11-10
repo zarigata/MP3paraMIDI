@@ -9,19 +9,19 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Tuple
 
 import torch
 import torchaudio
 from demucs import pretrained
 from demucs.apply import apply_model
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 SUPPORTED_FORMATS = [".mp3", ".wav", ".flac", ".ogg"]
 DEFAULT_MODEL = "htdemucs"
 STEM_NAMES = ["drums", "bass", "other", "vocals"]
-_MODEL_CACHE: Dict[str, torch.nn.Module] = {}
+_MODEL_CACHE: Dict[Tuple[str, str], torch.nn.Module] = {}
 
 
 def _get_device() -> str:
@@ -37,7 +37,7 @@ def _get_device() -> str:
         device = "cuda"
     else:
         device = "cpu"
-    logging.info("Using device: %s", device)
+    logger.info("Using device: %s", device)
     return device
 
 
@@ -64,25 +64,27 @@ def _load_model(model_name: str, device: str) -> torch.nn.Module:
         If the pretrained model cannot be downloaded or initialized.
     """
 
-    if model_name in _MODEL_CACHE:
-        cached_model = _MODEL_CACHE[model_name]
-        logging.info("Reusing cached model: %s", model_name)
+    cache_key = (model_name, device)
+    if cache_key in _MODEL_CACHE:
+        cached_model = _MODEL_CACHE[cache_key]
+        logger.info("Reusing cached model: %s on device %s", model_name, device)
+        cached_model.to(device)
         return cached_model
 
     try:
-        logging.info("Loading Demucs model: %s", model_name)
+        logger.info("Loading Demucs model: %s", model_name)
         model = pretrained.get_model(model_name)
     except Exception as exc:  # pragma: no cover - defensive logging
         error_message = (
             f"Unable to load Demucs model '{model_name}'. Verify the model name "
             "and network connectivity."
         )
-        logging.exception(error_message)
+        logger.exception(error_message)
         raise RuntimeError(error_message) from exc
 
     model.to(device)
     model.eval()
-    _MODEL_CACHE[model_name] = model
+    _MODEL_CACHE[cache_key] = model
     return model
 
 
@@ -161,10 +163,10 @@ def separate_audio(
     try:
         waveform, sample_rate = torchaudio.load(str(input_path_obj))
     except FileNotFoundError as exc:
-        logging.exception("Input file not found during load: %s", input_path_obj)
+        logger.exception("Input file not found during load: %s", input_path_obj)
         raise ValueError(f"Audio file not found: {input_path_obj}") from exc
     except Exception as exc:  # pragma: no cover - depends on torchaudio internals
-        logging.exception("Failed to load audio file: %s", input_path_obj)
+        logger.exception("Failed to load audio file: %s", input_path_obj)
         raise RuntimeError("Failed to load the audio file. It may be corrupted.") from exc
 
     if waveform.dtype != torch.float32:
@@ -176,13 +178,19 @@ def separate_audio(
     channels, _ = waveform.shape
     if channels == 1:
         waveform = waveform.repeat(2, 1)
-        logging.info("Converted mono audio to stereo for Demucs compatibility.")
+        logger.info("Converted mono audio to stereo for Demucs compatibility.")
     elif channels > 2:
-        logging.info(
+        logger.info(
             "Input audio has %s channels; using the first two channels for separation.",
             channels,
         )
         waveform = waveform[:2, :]
+
+    target_sr = getattr(model, "samplerate", sample_rate)
+    if target_sr and sample_rate != target_sr:
+        waveform = torchaudio.functional.resample(waveform, sample_rate, target_sr)
+        sample_rate = target_sr
+        logger.info("Resampled audio to match model samplerate: %s Hz", target_sr)
 
     mix = waveform.unsqueeze(0)  # [1, channels, samples]
 
@@ -198,10 +206,10 @@ def separate_audio(
                 progress=False,
             )
     except torch.cuda.OutOfMemoryError:
-        logging.exception("CUDA out of memory during separation: %s", input_path_obj)
+        logger.exception("CUDA out of memory during separation: %s", input_path_obj)
         raise
     except Exception as exc:  # pragma: no cover - inference errors are rare
-        logging.exception("Audio separation failed for file: %s", input_path_obj)
+        logger.exception("Audio separation failed for file: %s", input_path_obj)
         raise RuntimeError("Audio separation failed. Please try again.") from exc
 
     if separated.dim() != 4:
@@ -211,7 +219,7 @@ def separate_audio(
 
     _, stem_count, stem_channels, stem_samples = separated.shape
     if stem_channels != waveform.shape[0]:
-        logging.warning(
+        logger.warning(
             "Stem channel count (%s) does not match input channels (%s).",
             stem_channels,
             waveform.shape[0],
@@ -220,24 +228,37 @@ def separate_audio(
     stem_paths: Dict[str, str] = {}
     input_stem = input_path_obj.stem
 
-    if stem_count != len(STEM_NAMES):
-        logging.warning(
-            "Model produced %s stems; expected %s. Extra stems will be named generically.",
+    source_names = list(getattr(model, "sources", STEM_NAMES))
+
+    if stem_count != len(source_names):
+        logger.warning(
+            "Model produced %s stems; model defines %s sources. Names may be generic for mismatched stems.",
             stem_count,
-            len(STEM_NAMES),
+            len(source_names),
         )
 
     for index in range(stem_count):
-        if index < len(STEM_NAMES):
-            stem_name = STEM_NAMES[index]
+        if index < len(source_names):
+            stem_name = source_names[index]
         else:
             stem_name = f"stem_{index}"
 
         stem_waveform = separated[0, index].to("cpu")
+        if stem_waveform.dtype != torch.float32:
+            stem_waveform = stem_waveform.to(torch.float32)
+        stem_waveform = stem_waveform.clamp_(-1.0, 1.0)
         output_file = output_dir_obj / f"{input_stem}_stem_{stem_name}.wav"
-        torchaudio.save(str(output_file), stem_waveform, sample_rate)
+        try:
+            torchaudio.save(str(output_file), stem_waveform, sample_rate)
+        except Exception as exc:
+            logger.exception(
+                "Failed to save stem '%s' to %s", stem_name, output_file
+            )
+            raise RuntimeError(
+                f"Failed to save stem '{stem_name}' to '{output_file}'."
+            ) from exc
         stem_paths[stem_name] = str(output_file)
-        logging.info("Saved stem '%s' to %s", stem_name, output_file)
+        logger.info("Saved stem '%s' to %s", stem_name, output_file)
 
     return stem_paths
 
