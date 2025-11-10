@@ -48,6 +48,10 @@ uploads/
 *.mid
 *.midi
 
+# Melodia/Vamp artifacts
+melodia_vamp_plugin_*/
+temp_midi/
+
 # Caches
 .cache/
 # Uncomment to ignore PyTorch model cache
