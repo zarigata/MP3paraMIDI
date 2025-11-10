@@ -1,7 +1,21 @@
-torch>=2.0.0
-torchaudio>=2.0.0
 demucs==4.0.1
 
 basic-pitch>=0.4.0
 audio2midi[melodia_pitch_detector]>=0.15.0
 pretty-midi>=0.2.11
+
+Flask>=3.0.0
+flask-cors>=6.0.0
+Werkzeug>=3.0.0
+
+# Gradio interface
+gradio>=5.31.0
+
+# FastAPI for unified server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+a2wsgi>=1.10.0
+gunicorn>=21.2.0
+
+# Torch packages are installed per-environment (Dockerfiles or launcher scripts)
+# to keep GPU builds on CUDA wheels while CPU setups use native wheels.

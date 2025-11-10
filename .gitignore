@@ -40,6 +40,24 @@ env/
 outputs/
 uploads/
 
+# Flask runtime artifacts
+instance/
+.flask_session/
+
+# Generated storage directories
+storage/
+storage/uploads/
+storage/stems/
+storage/midi/
+
+# Gradio
+gradio_cached_examples/
+flagged/
+*.db
+
+# FastAPI/uvicorn
+*.pid
+
 # Audio and MIDI files
 *.mp3
 *.wav
@@ -56,3 +74,36 @@ temp_midi/
 .cache/
 # Uncomment to ignore PyTorch model cache
 # .cache/torch/
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+*.tar
+*.tar.gz
+docker-compose.override.yml
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Static asset build artifacts (if using preprocessors in future)
+static/dist/
+static/.cache/
+node_modules/
+package-lock.json
+yarn.lock
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor files (if not already present)
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

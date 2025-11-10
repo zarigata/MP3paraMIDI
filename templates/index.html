@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MP3paraMIDI - AI-Powered Audio Separation & MIDI Conversion">
+    <title>MP3paraMIDI - AI-Powered Audio to MIDI Converter</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body data-api-base="/api">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="glass-header glass-card" role="banner">
+        <div class="header-content">
+            <h1>MP3paraMIDI</h1>
+            <p class="subtitle">AI-Powered Audio Separation & MIDI Conversion</p>
+            <p class="credit">Developed by <a href="https://github.com/zarigata" target="_blank" rel="noopener">zarigata</a></p>
+        </div>
+    </header>
+
+    <main id="main-content" class="container" role="main">
+        <section class="upload-section">
+            <div class="glass-card upload-card" id="uploadCard">
+                <h2>Upload your audio file</h2>
+                <p class="section-description">Drag and drop an MP3, WAV, FLAC, or OGG file, or use the button below to browse.</p>
+                <form id="uploadForm" aria-label="Audio separation form">
+                    <div class="upload-dropzone" id="dropZone" role="button" tabindex="0" aria-label="Drag and drop audio file here">
+                        <span class="dropzone-icon" aria-hidden="true">🎵</span>
+                        <p><strong>Drop your file here</strong> or click to browse.</p>
+                        <p class="dropzone-hint">Maximum file size depends on server configuration.</p>
+                        <input type="file" id="audioFile" name="file" accept=".mp3,.wav,.flac,.ogg" aria-label="Select audio file" hidden>
+                    </div>
+                    <div class="upload-actions">
+                        <button type="button" id="browseBtn" class="btn-secondary">Choose File</button>
+                        <button type="submit" id="uploadBtn" class="btn-primary" disabled>Separate Audio</button>
+                    </div>
+                </form>
+                <div id="selectedFileInfo" class="selected-file" role="status" aria-live="polite"></div>
+                <div id="uploadProgress" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" hidden>
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection" aria-label="Separated stems" hidden>
+            <div class="results-header">
+                <h2>Separated Stems</h2>
+                <p>Listen to each track individually or download the stems for further mixing.</p>
+            </div>
+            <div id="stemsContainer" class="stems-grid" role="list"></div>
+
+            <div class="midi-section">
+                <button type="button" id="convertMidiBtn" class="btn-primary" disabled>Convert All to MIDI</button>
+                <div id="midiResult" class="midi-result glass-card" role="region" aria-live="polite" hidden></div>
+            </div>
+        </section>
+    </main>
+
+    <template id="stemCardTemplate">
+        <div class="stem-card glass-card" data-stem-name="" role="listitem">
+            <h3 class="stem-name"></h3>
+            <div class="audio-player" role="group" aria-label="Audio player controls">
+                <audio preload="metadata" crossorigin="anonymous"></audio>
+                <div class="player-controls">
+                    <button type="button" class="play-btn" aria-label="Play stem">▶️</button>
+                    <div class="time-display">
+                        <span class="current-time" aria-label="Current playback time">0:00</span>
+                        <input type="range" class="seek-bar" min="0" value="0" step="1" aria-label="Seek">
+                        <span class="duration" aria-label="Total duration">0:00</span>
+                    </div>
+                    <button type="button" class="volume-btn" aria-label="Mute stem">🔊</button>
+                    <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                </div>
+            </div>
+            <div class="stem-actions">
+                <button type="button" class="download-btn btn-secondary" aria-label="Download stem">⬇️ Download</button>
+                <span class="file-size" aria-label="File size"></span>
+            </div>
+        </div>
+    </template>
+
+    <footer class="site-footer" role="contentinfo">
+        <p>Powered by Demucs, Basic Pitch, and Melodia</p>
+        <p>
+            <a href="https://github.com/zarigata/MP3paraMIDI" target="_blank" rel="noopener">GitHub Repository</a>
+            &bull; <span class="license">Open source - attribution required</span>
+        </p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/realglass@1.0.1/RealGlass.standalone.js" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+</body>
+</html>

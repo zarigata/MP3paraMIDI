@@ -1,0 +1,57 @@
+# Docker Compose configuration for MP3paraMIDI
+# Development and local deployment setup
+#
+# Usage:
+#   docker-compose up -d          # Start in detached mode
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop and remove containers
+#   docker-compose down -v        # Stop and remove volumes (deletes data)
+#
+# Access:
+#   Flask Web UI: http://localhost:8000/
+#   Flask API: http://localhost:8000/api/
+#   Gradio Interface: http://localhost:8000/gradio
+
+version: '3.8'
+
+services:
+  mp3paramidi:
+    container_name: mp3paramidi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mp3paramidi:latest
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    # Environment variables can be set in .env file or overridden here
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      APP_STORAGE_ROOT: /app/storage
+      FLASK_DEBUG: ${FLASK_DEBUG:-False}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      GRADIO_AUTH: ${GRADIO_AUTH:-}
+    volumes:
+      - storage_data:/app/storage
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mp3paramidi_network
+
+volumes:
+  storage_data:
+    driver: local
+
+# For GPU support, use docker-compose.gpu.yml:
+#   docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up
+
+networks:
+  mp3paramidi_network:
+    driver: bridge

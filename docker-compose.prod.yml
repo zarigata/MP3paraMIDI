@@ -1,0 +1,49 @@
+# Docker Compose production override for MP3paraMIDI
+# Optimized for production deployment with multiple workers and resource limits
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Production checklist:
+#   1. Set CORS_ORIGINS in .env to specific domains (not '*')
+#   2. Set GRADIO_AUTH for authentication
+#   3. Configure reverse proxy (nginx/traefik) for HTTPS
+#   4. Set up log aggregation (ELK, Loki, etc.)
+#   5. Configure backup strategy for storage volume
+#   6. Set resource limits based on available hardware
+#   7. Enable monitoring (Prometheus, Grafana)
+#
+# Resource recommendations:
+#   - CPU: 4+ cores for optimal performance
+#   - RAM: 8GB minimum (16GB recommended for large files)
+#   - Storage: 50GB+ for persistent data
+#   - Network: 100Mbps+ for file uploads/downloads
+
+version: '3.8'
+
+services:
+  mp3paramidi:
+    command: ["gunicorn", "src.main:create_unified_app()", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8000", "--log-level", "warning"]
+    environment:
+      FLASK_DEBUG: "False"
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    cpus: 4.0
+    mem_limit: 8g
+    # Note: docker-compose ignores the swarm-only `deploy` section. For swarm deployments,
+    # reintroduce deploy.resources and adjust limits accordingly.
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Worker configuration:
+#   - CPU-only: Use 2-4 workers (2 * num_cores)
+#   - GPU: Use 1 worker to avoid CUDA context conflicts
+#   - Adjust based on workload (I/O-bound vs CPU-bound)
+#
+# Memory considerations:
+#   - Each worker requires ~2GB RAM baseline
+#   - Audio processing peaks at ~4GB per worker
+#   - Set limits to prevent OOM kills

@@ -1,0 +1,37 @@
+# Docker Compose GPU override for MP3paraMIDI
+# Enables NVIDIA GPU acceleration for faster audio processing
+#
+# Requirements:
+#   - NVIDIA GPU with CUDA support
+#   - NVIDIA Docker runtime installed
+#   - nvidia-docker2 package
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#
+# Verify GPU access:
+#   docker-compose exec mp3paramidi nvidia-smi
+#
+# Performance:
+#   GPU acceleration provides 5-10x speedup for audio separation
+#   Recommended for processing large files or batch operations
+#
+# Install NVIDIA Docker runtime:
+#   Ubuntu/Debian:
+#     distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+#     curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+#     curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+#     sudo apt-get update && sudo apt-get install -y nvidia-docker2
+#     sudo systemctl restart docker
+
+version: '3.8'
+
+services:
+  mp3paramidi:
+    build:
+      dockerfile: Dockerfile.gpu
+    image: mp3paramidi:gpu
+    gpus: all
+    environment:
+      CUDA_VISIBLE_DEVICES: 0
+    # Override for GPU-accelerated processing
