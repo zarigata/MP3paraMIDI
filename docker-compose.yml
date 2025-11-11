@@ -12,8 +12,6 @@
 #   Flask API: http://localhost:8000/api/
 #   Gradio Interface: http://localhost:8000/gradio
 
-version: '3.8'
-
 services:
   mp3paramidi:
     container_name: mp3paramidi

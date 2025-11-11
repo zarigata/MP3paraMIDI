@@ -19,7 +19,9 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
- && pip install --no-cache-dir -r requirements.txt
+ && pip install --no-cache-dir torch==2.0.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir numpy==1.26.4 \
+ && pip install --no-cache-dir --no-build-isolation -r requirements.txt
 
 FROM python:3.11-slim-bookworm AS runtime
 
@@ -62,4 +64,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["gunicorn", "src.main:create_unified_app()", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "-b", "0.0.0.0:8000"]
+CMD ["uvicorn", "src.main:create_unified_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

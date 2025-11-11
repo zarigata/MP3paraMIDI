@@ -351,7 +351,6 @@ def _build_tab_audio_separation() -> Dict[str, gr.components.Component]:
             type="filepath",
             label="Upload Audio File",
             sources=["upload"],
-            file_types=[".mp3", ".wav", ".flac", ".ogg"],
         )
         model_dropdown = gr.Dropdown(
             choices=get_available_models(),
@@ -433,7 +432,6 @@ def _build_tab_full_workflow() -> Dict[str, gr.components.Component]:
             type="filepath",
             label="Upload Audio File",
             sources=["upload"],
-            file_types=[".mp3", ".wav", ".flac", ".ogg"],
         )
         quick_model_dropdown = gr.Dropdown(
             choices=get_available_models(),

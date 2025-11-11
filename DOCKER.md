@@ -262,6 +262,45 @@ docker run --rm -v mp3paramidi_storage_data:/data -v $(pwd):/backup ubuntu tar c
 | Out of memory | Insufficient host RAM | Reduce workers, increase host memory, use GPU mode |
 | Permission errors | Volume ownership | `docker-compose exec mp3paramidi chown -R appuser:appuser /app/storage` |
 
+### Build fails with "ModuleNotFoundError: No module named 'numpy'"
+
+**Symptoms**
+
+- Docker build stops during `pip install`
+- Error trace references the `vamp` package importing numpy
+
+**Cause**
+
+- `audio2midi[melodia_pitch_detector]` depends on `vamp`, which requires numpy at build time
+- numpy is provided by PyTorch packages; if torch/torchaudio are not installed first, numpy is missing
+
+**Solution**
+
+1. Install PyTorch packages before the rest of the requirements in Docker builds:
+
+   ```dockerfile
+   RUN pip install --no-cache-dir torch==2.0.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cpu
+   RUN pip install --no-cache-dir -r requirements.txt
+   ```
+
+2. For GPU images, install the CUDA wheels first:
+
+   ```dockerfile
+   RUN pip install --no-cache-dir torch==2.0.0+cu121 torchaudio==2.0.0+cu121 --index-url https://download.pytorch.org/whl/cu121
+   ```
+
+3. When developing locally, install torch/torchaudio manually before other deps.
+
+**Verification**
+
+- Confirm the Dockerfile has separate `pip install` steps for PyTorch and requirements
+- Rebuild the image: `docker build --no-cache -t mp3paramidi:latest .`
+
+**Related Issues**
+
+- Avoid adding torch/torchaudio directly to `requirements.txt`
+- If you still see build failures, ensure no cached layers are reusing the old install order
+
 ## Performance Tuning
 
 ### Worker Configuration
