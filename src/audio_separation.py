@@ -19,8 +19,8 @@ from demucs.apply import apply_model
 logger = logging.getLogger(__name__)
 
 SUPPORTED_FORMATS = [".mp3", ".wav", ".flac", ".ogg"]
-DEFAULT_MODEL = "htdemucs"
-STEM_NAMES = ["drums", "bass", "other", "vocals"]
+DEFAULT_MODEL = "htdemucs_6s"
+STEM_NAMES = ["drums", "bass", "other", "vocals", "guitar", "piano"]
 _MODEL_CACHE: Dict[Tuple[str, str], torch.nn.Module] = {}
 
 
@@ -135,13 +135,16 @@ def separate_audio(
         Directory where the separated stems will be stored. Created if it does
         not already exist.
     model_name : str, optional
-        Demucs model identifier to employ. Defaults to ``"htdemucs"``.
+        Demucs model identifier to employ. Defaults to ``"htdemucs_6s"`` which
+        exposes six stems, including dedicated guitar and piano tracks.
 
     Returns
     -------
     dict[str, str]
         Mapping from stem names (``"drums"``, ``"bass"``, ``"other"``,
-        ``"vocals"``) to the absolute file paths of the generated WAV files.
+        ``"vocals"``, ``"guitar"``, ``"piano"``) to the absolute file paths of
+        the generated WAV files. When the selected model provides fewer stems,
+        only the available stem names are returned.
 
     Raises
     ------
@@ -269,10 +272,11 @@ def get_available_models() -> list[str]:
     Returns
     -------
     list[str]
-        Available model names. ``"htdemucs"`` provides four standard stems,
-        ``"htdemucs_ft"`` is fine-tuned for higher quality at the cost of speed,
-        ``"htdemucs_6s"`` expands to six stems including dedicated guitar and
-        piano tracks, and ``"hdemucs_mmi"`` is a multi-task model variant.
+        Available model names. ``"htdemucs_6s"`` (default) provides six stems,
+        adding dedicated guitar and piano tracks, ``"htdemucs"`` offers four
+        high-quality core stems, ``"htdemucs_ft"`` is fine-tuned for higher
+        fidelity at the cost of speed, and ``"hdemucs_mmi"`` is a multi-task
+        model variant.
     """
 
     return ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi"]

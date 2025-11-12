@@ -21,3 +21,5 @@ gunicorn>=21.2.0
 #   - CPU Dockerfile: torch==2.0.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cpu
 #   - GPU Dockerfile: torch==2.0.0+cu121 torchaudio==2.0.0+cu121 --index-url https://download.pytorch.org/whl/cu121
 # For local development, install torch/torchaudio manually based on your hardware.
+#
+# Docker builds pin numpy==1.26.4 to align with current Torch wheels; revisit when upgrading Torch/Torchaudio.

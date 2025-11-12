@@ -27,7 +27,7 @@ import logging
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import gradio as gr
 
@@ -45,8 +45,8 @@ except ImportError:  # pragma: no cover - torch should already be installed.
 
 logger = logging.getLogger(__name__)
 
-STEM_ORDER: Tuple[str, ...] = ("drums", "bass", "other", "vocals")
-"""Canonical order for displaying stem outputs."""
+STEM_ORDER: Tuple[str, ...] = ("drums", "bass", "other", "vocals", "guitar", "piano")
+"""Preferred order for displaying well-known stems. Additional stems are appended."""
 
 SUMMARY_HEADER = "### Separation Summary"
 """Markdown header used in summary outputs."""
@@ -142,12 +142,59 @@ def _prepare_stem_outputs(stem_paths: Dict[str, str]) -> Tuple[List[Optional[str
     return ordered_paths, summary_markdown
 
 
+def _build_stem_display_entries(stem_paths: Dict[str, str]) -> List[Dict[str, Any]]:
+    """Create a JSON-serializable list describing available stems."""
+
+    entries: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def append_entry(name: str, path: Optional[str]) -> None:
+        if not path:
+            return
+
+        entry: Dict[str, Any] = {"stem": name, "path": path}
+
+        try:
+            path_obj = Path(path)
+            if path_obj.exists():
+                size_bytes = path_obj.stat().st_size
+                entry["size_bytes"] = size_bytes
+                entry["size_readable"] = _format_file_size(size_bytes)
+        except OSError:
+            entry["size_bytes"] = None
+            entry["size_readable"] = "Unknown size"
+
+        entries.append(entry)
+        seen.add(name)
+
+    for stem_name in STEM_ORDER:
+        append_entry(stem_name, stem_paths.get(stem_name))
+
+    for stem_name, path in stem_paths.items():
+        if stem_name not in seen:
+            append_entry(stem_name, path)
+
+    return entries
+
+
+def _build_stem_dataset_rows(stem_paths: Dict[str, str]) -> List[List[str]]:
+    """Return dataset rows pairing stem audio, name, and size."""
+
+    dataset_rows: List[List[str]] = []
+    for entry in _build_stem_display_entries(stem_paths):
+        dataset_rows.append(
+            [
+                entry.get("path", ""),
+                entry.get("stem", ""),
+                entry.get("size_readable", "") or "",
+            ]
+        )
+    return dataset_rows
+
+
 def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
     str,
-    Optional[str],
-    Optional[str],
-    Optional[str],
-    Optional[str],
+    List[List[str]],
     str,
     str,
     str,
@@ -165,18 +212,15 @@ def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
     Returns
     -------
     tuple
-        ``(status, drums, bass, other, vocals, job_id, stem_paths_json, summary)``
-        where individual stem outputs are file paths or ``None``.
+        ``(status, stem_dataset_rows, job_id, stem_paths_json, summary)`` where
+        the dataset rows contain audio paths, stem names, and readable sizes.
     """
 
     if not audio_file:
         logger.warning("process_separation called without an audio file")
         return (
             "Please upload an audio file before starting separation.",
-            None,
-            None,
-            None,
-            None,
+            [],
             "",
             "{}",
             "",
@@ -197,10 +241,7 @@ def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
         _cleanup_directory(output_dir)
         return (
             f"Input error: {exc}",
-            None,
-            None,
-            None,
-            None,
+            [],
             "",
             "{}",
             "",
@@ -210,10 +251,7 @@ def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
         _cleanup_directory(output_dir)
         return (
             f"Separation failed: {exc}",
-            None,
-            None,
-            None,
-            None,
+            [],
             "",
             "{}",
             "",
@@ -228,16 +266,14 @@ def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
         _cleanup_directory(output_dir)
         return (
             message,
-            None,
-            None,
-            None,
-            None,
+            [],
             "",
             "{}",
             "",
         )
 
-    ordered_paths, summary_markdown = _prepare_stem_outputs(stem_paths)
+    _ordered_paths, summary_markdown = _prepare_stem_outputs(stem_paths)
+    stem_dataset_rows = _build_stem_dataset_rows(stem_paths)
     stem_paths_json = _serialize_stem_paths(stem_paths)
     job_id = output_dir.name
 
@@ -246,10 +282,7 @@ def process_separation(audio_file: Optional[str], model_name: str) -> Tuple[
 
     return (
         status_message,
-        ordered_paths[0],
-        ordered_paths[1],
-        ordered_paths[2],
-        ordered_paths[3],
+        stem_dataset_rows,
         job_id,
         stem_paths_json,
         summary_markdown,
@@ -316,7 +349,7 @@ def process_midi_conversion(job_id: str, stem_paths_json: str) -> Tuple[str, Opt
 
 def process_full_workflow(audio_file: Optional[str], model_name: str) -> Tuple[
     str,
-    List[Optional[str]],
+    List[Dict[str, Any]],
     Optional[str],
     str,
 ]:
@@ -324,22 +357,26 @@ def process_full_workflow(audio_file: Optional[str], model_name: str) -> Tuple[
 
     (
         separation_status,
-        drums,
-        bass,
-        other,
-        vocals,
+        _stem_dataset_rows,
         job_id,
         stem_paths_json,
         summary,
     ) = process_separation(audio_file, model_name)
 
-    stems = [drums, bass, other, vocals]
+    try:
+        stem_paths: Dict[str, str] = json.loads(stem_paths_json) if stem_paths_json else {}
+    except json.JSONDecodeError:
+        logger.error("Failed to decode stem paths JSON in full workflow")
+        stem_paths = {}
+
+    stem_entries = _build_stem_display_entries(stem_paths)
+
     if not job_id:
-        return (separation_status, stems, None, summary)
+        return (separation_status, stem_entries, None, summary)
 
     midi_status, midi_path = process_midi_conversion(job_id, stem_paths_json)
     final_status = f"{separation_status} {midi_status}".strip()
-    return (final_status, stems, midi_path, summary)
+    return (final_status, stem_entries, midi_path, summary)
 
 
 def _build_tab_audio_separation() -> Dict[str, gr.components.Component]:
@@ -354,19 +391,23 @@ def _build_tab_audio_separation() -> Dict[str, gr.components.Component]:
         )
         model_dropdown = gr.Dropdown(
             choices=get_available_models(),
-            value="htdemucs",
+            value="htdemucs_6s",
             label="Demucs Model",
         )
         separate_btn = gr.Button("Separate Audio", variant="primary")
         status_text = gr.Textbox(label="Status", interactive=False)
         gr.Markdown("### Separated Stems")
 
-        stem_outputs = [
-            gr.Audio(label="Drums", type="filepath"),
-            gr.Audio(label="Bass", type="filepath"),
-            gr.Audio(label="Other", type="filepath"),
-            gr.Audio(label="Vocals", type="filepath"),
-        ]
+        stems_dataset = gr.Dataset(
+            components=[
+                gr.Audio(label="Stem Audio", type="filepath"),
+                gr.Textbox(label="Stem Name", interactive=False),
+                gr.Textbox(label="Size", interactive=False),
+            ],
+            headers=["Audio", "Name", "Size"],
+            label="Separated Stems",
+            samples=[],
+        )
 
         job_id_state = gr.State()
         stem_paths_state = gr.State()
@@ -377,7 +418,7 @@ def _build_tab_audio_separation() -> Dict[str, gr.components.Component]:
             inputs=[audio_input, model_dropdown],
             outputs=[
                 status_text,
-                *stem_outputs,
+                stems_dataset,
                 job_id_state,
                 stem_paths_state,
                 summary_output,
@@ -389,7 +430,7 @@ def _build_tab_audio_separation() -> Dict[str, gr.components.Component]:
         "model_dropdown": model_dropdown,
         "separate_btn": separate_btn,
         "status_text": status_text,
-        "stem_outputs": stem_outputs,
+        "stems_dataset": stems_dataset,
         "job_id_state": job_id_state,
         "stem_paths_state": stem_paths_state,
         "summary_output": summary_output,
@@ -435,25 +476,20 @@ def _build_tab_full_workflow() -> Dict[str, gr.components.Component]:
         )
         quick_model_dropdown = gr.Dropdown(
             choices=get_available_models(),
-            value="htdemucs",
+            value="htdemucs_6s",
             label="Demucs Model",
         )
         quick_process_btn = gr.Button("Process & Convert", variant="primary")
         quick_status = gr.Textbox(label="Status", interactive=False)
         gr.Markdown("### Results")
-        quick_stem_outputs = [
-            gr.Audio(label="Drums", type="filepath"),
-            gr.Audio(label="Bass", type="filepath"),
-            gr.Audio(label="Other", type="filepath"),
-            gr.Audio(label="Vocals", type="filepath"),
-        ]
+        quick_stem_listing = gr.JSON(label="Separated Stems")
         quick_midi_output = gr.File(label="Download MIDI File")
         quick_summary = gr.Markdown()
 
         quick_process_btn.click(
             fn=process_full_workflow,
             inputs=[quick_audio_input, quick_model_dropdown],
-            outputs=[quick_status, *quick_stem_outputs, quick_midi_output, quick_summary],
+            outputs=[quick_status, quick_stem_listing, quick_midi_output, quick_summary],
         )
 
     return {
@@ -461,7 +497,7 @@ def _build_tab_full_workflow() -> Dict[str, gr.components.Component]:
         "quick_model_dropdown": quick_model_dropdown,
         "quick_process_btn": quick_process_btn,
         "quick_status": quick_status,
-        "quick_stem_outputs": quick_stem_outputs,
+        "quick_stem_listing": quick_stem_listing,
         "quick_midi_output": quick_midi_output,
         "quick_summary": quick_summary,
     }

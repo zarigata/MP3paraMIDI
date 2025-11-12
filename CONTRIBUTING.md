@@ -51,6 +51,23 @@ These principles are inspired by the [Contributor Covenant](https://www.contribu
 - For significant changes, open an issue first to discuss the proposal.
 - Keep changes focused and maintainable.
 
+#### Expanding Instrument Separation
+
+Interested in pushing the project beyond the default six stems? Use the integration points below as a checklist:
+
+1. **External Separation Backends (e.g., Lalals, Fadr):**
+   - Implement API clients alongside Demucs in `src/audio_separation.py` with authentication, rate limiting, and caching.
+   - Extend `src/app.py` and the Gradio UI to expose new backend choices and document required environment variables in `.env.example`.
+2. **Hierarchical Stem Splits:**
+   - Add post-processing modules that further decompose the "other" stem (strings, brass, synth, etc.).
+   - Update MIDI conversion mappings in `src/audio_to_midi.py` with General MIDI program numbers for new instruments.
+3. **UI Enhancements:**
+   - The Gradio and Flask frontends already render stems dynamically—update `STEM_ORDER` and `static/js/main.js` emoji mappings to control ordering and visuals for new instruments.
+   - Consider pagination or grouping if stem counts grow beyond 10.
+4. **Testing & Documentation:**
+   - Add regression tests covering new separation paths and MIDI output.
+   - Document configuration, performance impact, and quality expectations in `README.md` and `DOCKER.md`.
+
 ### Improving Documentation
 
 - Fix typos, clarify instructions, add examples, or update references.

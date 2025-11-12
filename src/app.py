@@ -306,6 +306,7 @@ def separate_endpoint():
                 "size": _get_file_size(stem_path),
                 "download_url": _build_download_url(job_id, "stems", file_name),
                 "download_url_encoded": _build_encoded_download_url(job_id, "stems", file_name),
+                "stream_url": _build_stream_url(job_id, "stems", file_name),
             }
         )
 
@@ -451,6 +452,38 @@ def download_endpoint(job_id: str, category: str, filename: str):
         return _create_error_response("An unexpected error occurred", 500)
 
 
+@api_bp.get("/stream/<job_id>/<category>/<path:filename>")
+def stream_endpoint(job_id: str, category: str, filename: str):
+    """Serve files for inline streaming without forcing download prompts."""
+
+    try:
+        uuid.UUID(job_id)
+    except ValueError:
+        return _create_error_response("'job_id' must be a valid UUID", 400)
+
+    if category != "stems":
+        return _create_error_response("Streaming is only supported for stems", 400)
+
+    base_dir = Path(current_app.config["STEMS_DIR"]) / job_id
+
+    try:
+        return send_from_directory(
+            directory=str(base_dir),
+            path=filename,
+            as_attachment=False,
+            conditional=True,
+        )
+    except NotFound:
+        return _create_error_response("File not found", 404)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "Unexpected error while streaming file (job=%s, filename=%s)",
+            job_id,
+            filename,
+        )
+        return _create_error_response("An unexpected error occurred", 500)
+
+
 @api_bp.get("/download/<path:file_id>")
 def download_encoded_endpoint(file_id: str):
     """Serve files using encoded identifier containing job metadata."""
@@ -497,7 +530,27 @@ def _build_download_url(job_id: str, category: str, filename: str) -> str:
     relative_url = f"/api/download/{job_id}/{safe_category}/{safe_filename}"
 
     if current_app.config.get("ABSOLUTE_URLS", False) and has_request_context():
-        return request.host_url.rstrip("/") + relative_url
+        return url_for("api.download_endpoint", job_id=job_id, category=safe_category, filename=safe_filename, _external=True)
+
+    return relative_url
+
+
+def _build_stream_url(job_id: str, category: str, filename: str) -> str:
+    """Construct a streaming URL that keeps content inline."""
+
+    safe_filename = secure_filename(filename)
+    safe_category = secure_filename(category)
+    relative_url = f"/api/stream/{job_id}/{safe_category}/{safe_filename}"
+
+    if current_app.config.get("ABSOLUTE_URLS", False) and has_request_context():
+        return url_for(
+            "api.stream_endpoint",
+            job_id=job_id,
+            category=safe_category,
+            filename=safe_filename,
+            _external=True,
+        )
+
     return relative_url
 
 

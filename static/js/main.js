@@ -33,6 +33,8 @@
         bass: '🎸',
         vocals: '🎤',
         other: '🎹',
+        guitar: '🎸',
+        piano: '🎹',
     };
 
     const ALLOWED_MIME_TYPES = new Set([
@@ -302,6 +304,11 @@
             return;
         }
 
+        const el = element instanceof HTMLElement ? element : element?.firstElementChild;
+        if (!el || el.hasAttribute('hidden') || el.closest('[hidden]')) {
+            return;
+        }
+
         const defaults = {
             frosting: 0.2,
             borderRadius: 16,
@@ -310,7 +317,7 @@
         };
 
         try {
-            await state.realGlassInstance.apply(element, { ...defaults, ...options });
+            await state.realGlassInstance.apply(el, { ...defaults, ...options });
         } catch (error) {
             console.warn('RealGlass effect failed:', error);
         }
@@ -335,6 +342,7 @@
             size,
             download_url: downloadUrl,
             download_url_encoded: downloadUrlEncoded,
+            stream_url: streamUrl,
         } = stem;
         const template = elements.stemCardTemplate.content.cloneNode(true);
         const card = template.querySelector('.stem-card');
@@ -352,13 +360,15 @@
         card.dataset.stemName = name;
         const emoji = STEM_EMOJI[name?.toLowerCase()] || '🎼';
         nameEl.textContent = `${emoji} ${name}`;
-        audio.src = downloadUrl || downloadUrlEncoded || getDownloadUrl(state.jobId, 'stems', filename);
+        const primaryUrl = streamUrl || downloadUrl || downloadUrlEncoded;
+        audio.src = primaryUrl || getDownloadUrl(state.jobId, 'stems', filename);
         audio.preload = 'metadata';
         audio.controls = false;
+        audio.crossOrigin = 'anonymous';
 
         fileSizeEl.textContent = size ? formatFileSize(size) : '';
         downloadBtn.addEventListener('click', () => {
-            const url = downloadUrl || downloadUrlEncoded || getDownloadUrl(state.jobId, 'stems', filename);
+            const url = downloadUrl || downloadUrlEncoded || streamUrl || getDownloadUrl(state.jobId, 'stems', filename);
             window.open(url, '_blank');
         });
 
@@ -386,10 +396,19 @@
         });
 
         audio.addEventListener('loadedmetadata', () => {
-            if (audio.duration) {
+            if (audio.duration && Number.isFinite(audio.duration)) {
                 seekBar.max = Math.floor(audio.duration);
                 duration.textContent = formatTime(audio.duration);
             }
+        });
+
+        audio.addEventListener('error', () => {
+            if (primaryUrl && audio.src !== primaryUrl) {
+                audio.src = primaryUrl;
+                audio.load();
+                return;
+            }
+            showStatus(`Error loading ${name} stem. Try downloading instead.`, 'error');
         });
 
         audio.addEventListener('timeupdate', () => {
@@ -437,10 +456,6 @@
         audio.addEventListener('ended', () => {
             audio.currentTime = 0;
             audio.pause();
-        });
-
-        audio.addEventListener('error', () => {
-            showStatus(`Error loading ${name} stem. Try downloading instead.`, 'error');
         });
 
         card.addEventListener('keydown', (event) => {
@@ -708,7 +723,9 @@
         bindEventListeners();
         await initRealGlass();
 
-        const staticCards = document.querySelectorAll('.glass-card');
+        const staticCards = Array.from(document.querySelectorAll('.glass-card')).filter(
+            (card) => card instanceof HTMLElement && !card.hasAttribute('hidden') && !card.closest('[hidden]')
+        );
         for (const card of staticCards) {
             await applyGlassEffect(card);
         }

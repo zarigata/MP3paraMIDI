@@ -17,6 +17,7 @@ COPY requirements.txt ./
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+ENV VAMP_PATH=/usr/local/lib/vamp
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
  && pip install --no-cache-dir torch==2.0.0 torchaudio==2.0.0 --index-url https://download.pytorch.org/whl/cpu \
@@ -35,7 +36,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvamp-hostsdk3v5 \
     vamp-plugin-sdk \
     curl \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /usr/local/lib/vamp
+
+ENV VAMP_PATH=/usr/local/lib/vamp
 
 RUN groupadd -r appuser -g 1000 && \
     useradd -r -u 1000 -g appuser -m -s /bin/bash appuser
@@ -48,6 +52,7 @@ COPY --chown=appuser:appuser src/ /app/src/
 COPY --chown=appuser:appuser templates/ /app/templates/
 COPY --chown=appuser:appuser static/ /app/static/
 COPY --chown=appuser:appuser .env.example /app/.env.example
+COPY --chown=appuser:appuser vendor/mtg-melodia/ /usr/local/lib/vamp/
 
 RUN mkdir -p /app/storage && chown -R appuser:appuser /app/storage
 

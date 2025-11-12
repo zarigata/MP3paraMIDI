@@ -81,27 +81,40 @@ def test_process_separation_with_valid_audio(sample_audio_file, mocker):
     }
     mocker.patch("src.gradio_app.separate_audio", return_value=mock_stem_paths)
 
-    status, *rest = process_separation(sample_audio_file, "htdemucs")
-    stems = rest[:4]
-    job_id = rest[4]
-    stem_paths_json = rest[5]
+    status, dataset_rows, job_id, stem_paths_json, summary = process_separation(
+        sample_audio_file, "htdemucs"
+    )
 
     assert "successfully" in status.lower()
-    assert all(path for path in stems)
+    assert dataset_rows
+    assert all(len(row) == 3 for row in dataset_rows)
+    assert all(row[0] for row in dataset_rows)
     assert job_id
     assert json.loads(stem_paths_json) == mock_stem_paths
+    assert summary.startswith(gradio_app.SUMMARY_HEADER)
 
 
 def test_process_separation_with_missing_audio():
-    status, *rest = process_separation(None, "htdemucs")
+    status, dataset_rows, job_id, stem_paths_json, summary = process_separation(
+        None, "htdemucs"
+    )
     assert "please upload" in status.lower()
-    assert all(item in (None, "", "{}") for item in rest)
+    assert dataset_rows == []
+    assert job_id == ""
+    assert stem_paths_json == "{}"
+    assert summary == ""
 
 
 def test_process_separation_handles_value_error(sample_audio_file, mocker):
     mocker.patch("src.gradio_app.separate_audio", side_effect=ValueError("bad model"))
-    status, *_ = process_separation(sample_audio_file, "invalid")
+    status, dataset_rows, job_id, stem_paths_json, summary = process_separation(
+        sample_audio_file, "invalid"
+    )
     assert "input error" in status.lower()
+    assert dataset_rows == []
+    assert job_id == ""
+    assert stem_paths_json == "{}"
+    assert summary == ""
 
 
 def test_process_midi_conversion_with_valid_data(tmp_path, mocker):
@@ -131,10 +144,7 @@ def test_process_midi_conversion_without_job_id():
 def test_process_full_workflow_success(sample_audio_file, mocker):
     separation_result = (
         "Audio separated successfully.",
-        "drums.wav",
-        "bass.wav",
-        "other.wav",
-        "vocals.wav",
+        [["drums.wav", "drums", ""], ["bass.wav", "bass", ""]],
         "job999",
         json.dumps({stem: f"/tmp/{stem}.wav" for stem in STEM_ORDER}),
         "summary",
@@ -144,11 +154,13 @@ def test_process_full_workflow_success(sample_audio_file, mocker):
     mocker.patch("src.gradio_app.process_separation", return_value=separation_result)
     mocker.patch("src.gradio_app.process_midi_conversion", return_value=midi_result)
 
-    status, stems, midi_file, summary = process_full_workflow(sample_audio_file, "htdemucs")
+    status, stem_entries, midi_file, summary = process_full_workflow(sample_audio_file, "htdemucs")
 
     assert "audio separated" in status.lower()
     assert midi_file == "combined.mid"
-    assert len(stems) == 4
+    assert isinstance(stem_entries, list)
+    assert {entry["stem"] for entry in stem_entries} == set(STEM_ORDER)
+    assert all("path" in entry for entry in stem_entries)
     assert summary == "summary"
 
 

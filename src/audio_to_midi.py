@@ -20,13 +20,17 @@ tracks play back with sensible instrument assignments.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import tempfile
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pretty_midi
+from basic_pitch.inference import Model as BasicPitchModel
 from basic_pitch.inference import predict_and_save as basic_pitch_predict_and_save
+from basic_pitch import ICASSP_2022_MODEL_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +112,40 @@ def _assign_instrument_program(instrument: pretty_midi.Instrument, stem_name: st
     )
 
 
+@lru_cache(maxsize=1)
+def _get_basic_pitch_model_path() -> Optional[Path]:
+    """Return the Basic Pitch model path, loading default if available."""
+
+    model_path = os.getenv("BASIC_PITCH_MODEL_PATH")
+    if model_path:
+        candidate = Path(model_path).expanduser()
+        if candidate.exists():
+            return candidate
+        logger.warning("Configured BASIC_PITCH_MODEL_PATH=%s not found.", candidate)
+    if ICASSP_2022_MODEL_PATH:
+        path_obj = Path(ICASSP_2022_MODEL_PATH)
+        if path_obj.exists():
+            return path_obj
+    logger.warning(
+        "Basic Pitch default model not found. MIDI conversion may fail; reinstall basic-pitch with models."
+    )
+    return None
+
+
+@lru_cache(maxsize=1)
+def _get_basic_pitch_model() -> Optional[BasicPitchModel]:
+    """Instantiate and cache the Basic Pitch model if possible."""
+
+    model_path = _get_basic_pitch_model_path()
+    if not model_path:
+        return None
+    try:
+        return BasicPitchModel(model_path)
+    except Exception as exc:
+        logger.warning("Failed to load Basic Pitch model at %s: %s", model_path, exc)
+        return None
+
+
 def _convert_with_basic_pitch(audio_path: Path, stem_name: str) -> pretty_midi.PrettyMIDI:
     """Convert audio to MIDI using Spotify Basic Pitch.
 
@@ -132,12 +170,21 @@ def _convert_with_basic_pitch(audio_path: Path, stem_name: str) -> pretty_midi.P
     try:
         logger.info("Running Basic Pitch inference for stem '%s'.", stem_name)
         with tempfile.TemporaryDirectory(prefix="basic_pitch_") as tmpdir:
+            model = _get_basic_pitch_model()
+            model_path = _get_basic_pitch_model_path()
+            if model is None and model_path is None:
+                raise RuntimeError(
+                    "Basic Pitch model unavailable. Ensure 'basic-pitch' extras are installed."
+                )
+
             basic_pitch_predict_and_save(
-                str(audio_path),
-                tmpdir,
+                audio_path_list=[str(audio_path)],
+                output_directory=tmpdir,
                 save_midi=True,
+                sonify_midi=False,
                 save_model_outputs=False,
                 save_notes=False,
+                model_or_model_path=model if model is not None else str(model_path),
             )
             temp_dir = Path(tmpdir)
             midi_candidates = sorted(temp_dir.glob("*_basic_pitch.mid"))
@@ -202,11 +249,27 @@ def _convert_with_melodia(audio_path: Path, stem_name: str) -> pretty_midi.Prett
     midi_data: pretty_midi.PrettyMIDI | None = None
 
     try:
-        from audio2midi import Melodia
+        try:
+            from audio2midi import Melodia  # type: ignore[attr-defined]
+        except ImportError:
+            from audio2midi.melodia_pitch_detector import (  # type: ignore[attr-defined]
+                Melodia,
+            )
 
         logger.info("Running Melodia inference for stem '%s'.", stem_name)
         melodia = Melodia()
-        midi_data = melodia.predict(str(audio_path))
+        with tempfile.TemporaryDirectory(prefix="melodia_") as tmpdir:
+            output_file = Path(tmpdir) / f"{audio_path.stem}_melodia.mid"
+            result_path = melodia.predict(
+                str(audio_path),
+                output_file=str(output_file),
+            )
+
+            midi_path = Path(result_path) if result_path else output_file
+            if not midi_path.exists():
+                raise RuntimeError("Melodia did not produce a MIDI file.")
+
+            midi_data = pretty_midi.PrettyMIDI(str(midi_path))
     except ImportError:
         logger.warning(
             "Melodia plugin not available; falling back to librosa.pyin for stem '%s'.",

@@ -70,7 +70,7 @@ docker-compose down -v
 - Dockerfile: `Dockerfile`
 - Base: `python:3.11-slim-bookworm`
 - Size: ~2 GB
-- Usage: General deployment without GPU requirements
+- Usage: General deployment without GPU requirements. Ships with Demucs ``htdemucs_6s`` as the default separation model, yielding six stems (drums, bass, vocals, other, guitar, piano). Switch to 4-stem variants via the UI/API when prioritising speed.
 
 Build locally:
 
@@ -83,7 +83,7 @@ docker build -t mp3paramidi:latest .
 - Dockerfile: `Dockerfile.gpu`
 - Base: `nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04`
 - Size: ~4 GB
-- Usage: Accelerated separation and transcription (5-10x faster)
+- Usage: Accelerated separation and transcription (5-10x faster). Retains the ``htdemucs_6s`` default while allowing runtime selection of other models for quality/performance trade-offs.
 - Requirements: NVIDIA GPU with CUDA support
 
 Build locally:
